@@ -79,11 +79,11 @@ if opt.network == '' then
       ------------------------------------------------------------
       -- stage 1 : mean suppresion -> filter bank -> squashing -> max pooling
       model:add(nn.SpatialConvolutionMM(1, 32, 5, 5))
-      --model:add(nn.Tanh())
+      model:add(nn.Tanh())
       model:add(nn.SpatialMaxPooling(3, 3, 3, 3))
       -- stage 2 : mean suppresion -> filter bank -> squashing -> max pooling
       model:add(nn.SpatialConvolutionMM(32, 64, 5, 5))
-      model:add(nn.Tanh())
+      --model:add(nn.Tanh())
       model:add(nn.SpatialMaxPooling(2, 2, 2, 2))
       -- stage 3 : standard 2-layer MLP:
       model:add(nn.Reshape(64*2*2))
@@ -242,7 +242,6 @@ function train(dataset)
             maxIter = opt.maxIter,
             lineSearch = optim.lswolfe
          }
-         
          optim.lbfgs(feval, parameters, lbfgsState)
        
          -- disp report:
@@ -252,6 +251,7 @@ function train(dataset)
          print(' - nb of function evalutions: ' .. lbfgsState.funcEval)
 
       elseif opt.optimization == 'SGD' then
+
          -- Perform SGD step:
          sgdState = sgdState or {
             learningRate = opt.learningRate,
@@ -266,11 +266,7 @@ function train(dataset)
       else
          error('unknown optimization method')
       end
-
    end
-   
-
-
    
    -- time taken
    time = sys.clock() - time
@@ -293,7 +289,6 @@ function train(dataset)
 
    -- next epoch
    epoch = epoch + 1
-   return epoch
 end
 
 -- test function
@@ -339,34 +334,22 @@ function test(dataset)
    -- print confusion matrix
    print(confusion)
    testLogger:add{['% mean class accuracy (test set)'] = confusion.totalValid * 100}
-   rate = confusion.totalValid 
    confusion:zero()
-   return rate 
 end
 
 ----------------------------------------------------------------------
 -- and train!
 --
-
-exitRate = 0.993
-
 while true do
    -- train/test
-   epoch = train(trainData)
-   validRate = test(testData)
+   train(trainData)
+   test(testData)
 
-
-
-   if validRate > exitRate then
-      str =(nbTrainingPatches .. " sample Training, reached " .. exitRate .. " correct rate when epoch = " .. epoch)
-      print(str)
-      return
+   -- plot errors
+   if opt.plot then
+      trainLogger:style{['% mean class accuracy (train set)'] = '-'}
+      testLogger:style{['% mean class accuracy (test set)'] = '-'}
+      trainLogger:plot()
+      testLogger:plot()
    end
-
- 
-   --trainLogger:style{['% mean class accuracy (train set)'] = '-'}
-   --testLogger:style{['% mean class accuracy (test set)'] = '-'}
-   --trainLogger:plot()
-   --testLogger:plot()
-
 end
